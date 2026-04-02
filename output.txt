@@ -58,7 +58,7 @@ Null: NO
 Diagonally Dominant: NO
 ========================================
 
-Matrix is not diagonally dominant → Gauss-Seidel may not converge.
+Matrix is not diagonally dominant → Jacobi may not converge.
 Using Gaussian Pivot instead.
 
 Solution

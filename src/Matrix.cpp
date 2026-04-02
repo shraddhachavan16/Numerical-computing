@@ -768,43 +768,7 @@ Matrix Matrix::inverse() const
     return inv;
 }
 
-// ===============================
-// GERSHGORIN THEOREM
-// ===============================
-void Matrix::gershgorinDiscs(ofstream &fout) const
-{
-    if(!isSquare())
-    {
-        fout << "Gershgorin theorem applies only to square matrices\n";
-        return;
-    }
 
-    fout << "\n===== Gershgorin Discs =====\n";
-
-    for(int i = 0; i < rows; i++)
-    {
-        double center = data[i][i];
-        double radius = 0;
-
-        for(int j = 0; j < cols; j++)
-        {
-            if(i != j)
-                radius += fabs(data[i][j]);
-        }
-
-        fout << "Disc " << i+1 << ":\n";
-        fout << "Center = " << center << "\n";
-        fout << "Radius = " << radius << "\n";
-        fout << "Range = ["
-             << center - radius << ", "
-             << center + radius << "]\n\n";
-    }
-
-    fout << "All eigenvalues lie within these discs.\n";
-
-    if(isDiagonallyDominant())
-        fout << "Matrix is diagonally dominant → good for iterative methods\n";
-}
 ostream &operator<<(ostream &out, const Matrix &m)
 {
     for(int i = 0; i < m.rows; i++)

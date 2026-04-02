@@ -77,7 +77,8 @@ public:
 
     double determinant() const;
     Matrix inverse() const;
-    void gershgorinDiscs(ofstream &fout) const;
+    int getRows() const { return rows; }
+     void gershgorinDiscs(ofstream &fout) const;
     Matrix getCoefficientMatrix() const;
 };
 

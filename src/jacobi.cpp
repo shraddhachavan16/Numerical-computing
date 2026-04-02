@@ -1,83 +1,79 @@
-
-#include "jacobi.h"
+#include "Jacobi.h"
 #include <vector>
 #include <cmath>
 #include <iostream>
 
-using namespace std;
-
 Jacobi::Jacobi(const Matrix &m) : Iterative(m) {}
 
-bool Jacobi::isDiagonallyDominant()
+std::vector<double> Jacobi::solve()
 {
-    for(int i = 0; i < rows; i++)
-    {
-        double sum = 0;
+    int n = rows;
 
-        for(int j = 0; j < rows; j++)
+    std::vector<double> x(n, 0.0);
+    std::vector<double> x_new(n, 0.0);
+
+    if(cols != rows + 1)
+    {
+        std::cout << "Error: Matrix must be augmented\n";
+        return x;
+    }
+
+    // Check + fix dominance
+    if(!isDiagonallyDominant())
+    {
+        std::cout << "Matrix is NOT diagonally dominant\n";
+
+        if(makeDiagonallyDominant())
+            std::cout << "Matrix rearranged to diagonally dominant form\n";
+        else
+            std::cout << "Warning: Cannot make diagonally dominant\n";
+    }
+
+    bool converged = false;
+
+    for(int iter = 0; iter < maxIter; iter++)
+    {
+        // 🔁 compute new values
+        for(int i = 0; i < n; i++)
         {
-            if(i != j)
-                sum += fabs((*this)(i,j));
+            double sum = (*this)(i,n);
+            double diag = (*this)(i,i);
+
+            if(fabs(diag) < 1e-12)
+            {
+                std::cout << "Zero diagonal error\n";
+                return x;
+            }
+
+            for(int j = 0; j < n; j++)
+            {
+                if(i != j)
+                    sum -= (*this)(i,j) * x[j];
+            }
+
+            x_new[i] = sum / diag;
         }
 
-        if(fabs((*this)(i,i)) < sum)
-            return false;
-    }
-    return true;
-}
+        // 🔁 calculate error
+        double error = 0;
+        for(int i = 0; i < n; i++)
+        {
+            double diff = fabs(x_new[i] - x[i]);
+            if(diff > error)
+                error = diff;
+        }
 
-void Jacobi::solve(ofstream &fout)
-{
-	int n = rows;
-	vector<double> x(n, 0.0), x_new(n, 0.0);
-	if(cols != rows + 1)
-	{
-		fout << "Error: Matrix must be augmented (n x n+1)\n";
-		return;
-	}
-	if(!isDiagonallyDominant())
-	{
-		fout << "Warning: Matrix is NOT diagonally dominant\n";
-		fout << "Jacobi may diverge\n";
-	}
-	bool converged = false;
-	for(int iter = 0; iter < maxIter; iter++)
-	{
-		for(int i = 0; i < n; i++)
-		{
-			double diag = (*this)(i,i);
-			if(fabs(diag) < 1e-12)
-			{
-				fout << "Error: Zero diagonal at row " << i+1 << endl;
-				return;
-			}
-			double sum = (*this)(i,n);
-			for(int j = 0; j < n; j++)
-			{
-				if(i != j)
-					sum -= (*this)(i,j) * x[j];
-			}
-			x_new[i] = sum / diag;
-		}
-		double err = 0;
-		for(int i = 0; i < n; i++)
-			err = max(err, fabs(x_new[i] - x[i]));
-		if(err < tol)
-		{
-			converged = true;
-			fout << "\nJacobi converged in " << iter+1 << " iterations\n";
-			break;
-		}
-		if(err > 1e10)
-		{
-			fout << "\nJacobi diverging (unstable)\n";
-			return;
-		}
-		x = x_new;
-	}
-	fout << "\nJacobi Solution:\n";
-	for(int i = 0; i < n; i++)
-		fout << "x" << i+1 << " = " << x_new[i] << endl;
-	if(!converged)
-		fout << "\nWarning: Maximum iterations reached\n";
+        if(error < tol)
+        {
+            converged = true;
+            break;
+        }
+
+        x = x_new;  // 🔥 Jacobi update after full iteration
+    }
+
+    if(!converged)
+        std::cout << "Warning: Max iterations reached\n";
+
+    return x;   // ✅ return result
 }
