@@ -71,3 +71,11 @@ bool Iterative::makeDiagonallyDominant()
 
     return isDiagonallyDominant();
 }
+
+void Iterative::solve(std::ofstream &fout)
+{
+    std::vector<double> res = solve();
+    fout << "\nSolution:\n";
+    for(size_t i=0; i<res.size(); i++)
+        fout << "x" << i+1 << " = " << res[i] << "\n";
+}

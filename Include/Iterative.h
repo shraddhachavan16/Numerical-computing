@@ -36,6 +36,7 @@ public:
     bool isDiagonallyDominant();
     bool makeDiagonallyDominant();
     virtual std::vector<double> solve() = 0;
+    void solve(std::ofstream &fout) override;
 
 };
 
