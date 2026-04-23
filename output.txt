@@ -15,5 +15,13 @@ Diagonally Dominant: NO
 ========================================
 No Overfitting
 
-Line: y = 0.7x + 2.6
-RMS Error = 0.244949
+Coefficients:
+a0 = 2.7429
+a1 = 0.4167
+a2 = -0.0714
+a3 = 0.0833
+
+Equation:
+y = 2.7429 + 0.4167x^1 - 0.0714x^2 + 0.0833x^3
+
+RMS Error: 0.1604
