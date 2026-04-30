@@ -233,6 +233,5 @@ int main()
 
     cout << "\nComputation finished.\n";
     cout << "Check output.txt\n";
-
     return 0;
 }
