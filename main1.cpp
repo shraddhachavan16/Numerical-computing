@@ -203,7 +203,7 @@ int main()
         {
             int degree;
 
-            cout << "\nEnter polynomial degree: ";
+            cout << "Enter polynomial degree: ";
             cin >> degree;
 
            
