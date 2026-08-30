@@ -165,11 +165,6 @@ for name in all_errors:
         label='Richardson Extrapolation'
     )
 
-
-    # -------------------------------------------------
-    # Graph Labels
-    # -------------------------------------------------
-
     plt.xlabel("h")
 
     plt.ylabel("Absolute Error")
