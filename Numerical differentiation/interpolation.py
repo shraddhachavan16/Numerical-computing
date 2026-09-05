@@ -1,29 +1,8 @@
 class Interpolation:
 
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
+    def __init__(self, x_data, y_data):
+        self.x_data = x_data
+        self.y_data = y_data
 
-
-class LagrangeInterpolation(Interpolation):
-
-    def calculate(self, value):
-
-        result = 0
-        n = len(self.x)
-
-        for i in range(n):
-
-            term = self.y[i]
-
-            for j in range(n):
-
-                if i != j:
-                    term = term * (
-                        (value - self.x[j])
-                        / (self.x[i] - self.x[j])
-                    )
-
-            result = result + term
-
-        return result
+    def calculate(self, x):
+        pass
