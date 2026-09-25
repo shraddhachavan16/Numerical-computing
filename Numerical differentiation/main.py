@@ -1,5 +1,4 @@
 import math
-import csv
 import os
 import matplotlib.pyplot as plt
 
@@ -12,6 +11,11 @@ from differentiation import (
 
 from lagrange import LagrangeInterpolation
 from newton import NewtonInterpolation
+from integration import (
+    TrapezoidalRule,
+    Simpson13Rule,
+    Simpson38Rule
+)
 
 
 # ============================================================
@@ -20,86 +24,72 @@ from newton import NewtonInterpolation
 
 functions = [
     ("e^x", math.exp, math.exp),
-
     ("sin(x)", math.sin, math.cos),
-
-    ("x^3 - 2x + 1",
-     lambda x: x**3 - 2*x + 1,
-     lambda x: 3*x**2 - 2)
+    (
+        "x^3 - 2x + 1",
+        lambda x: x**3 - 2*x + 1,
+        lambda x: 3*x**2 - 2
+    )
 ]
 
-
-# ============================================================
-# INPUT
-# ============================================================
-
-x = float(input("Enter x value: "))
-
-data = input("Enter known x values separated by comma: ")
-
-x_data = [float(v.strip()) for v in data.split(",")]
-
-
-if len(x_data) < 2:
-    print("Enter at least 2 x values.")
-    exit()
-
-if len(x_data) != len(set(x_data)):
-    print("x values must be different.")
-    exit()
-
-
-# ============================================================
-# H VALUES
-# ============================================================
-
-h_values = [
-    0.1,
-    0.01,
-    0.001,
-    0.0001,
-    0.00001,
-    0.000001
-]
-
-
-# ============================================================
-# CREATE GRAPH FOLDER
-# ============================================================
-
+# Create graphs folder
 os.makedirs("graphs", exist_ok=True)
 
 
 # ============================================================
-# STORE RESULTS
+# CHOOSE FUNCTION
 # ============================================================
 
-diff_results = []
-lagrange_results = []
-newton_results = []
+def choose_function():
+
+    print("\nChoose function:")
+    print("1. e^x")
+    print("2. sin(x)")
+    print("3. x^3 - 2x + 1")
+
+    choice = int(input("Enter function choice: "))
+
+    if choice < 1 or choice > 3:
+        print("Invalid function choice.")
+        return None
+
+    return functions[choice - 1]
 
 
 # ============================================================
-# DIFFERENTIATION
+# NUMERICAL DIFFERENTIATION
 # ============================================================
 
-for name, f, df in functions:
+def differentiation():
+
+    print("\n" + "=" * 70)
+    print("NUMERICAL DIFFERENTIATION")
+    print("=" * 70)
+
+    x = float(input("Enter x value: "))
+
+    selected = choose_function()
+
+    if selected is None:
+        return
+
+    name, f, df = selected
+
+    h_values = [
+        0.1,
+        0.01,
+        0.001,
+        0.0001,
+        0.00001,
+        0.000001
+    ]
 
     exact = df(x)
 
-    forward_errors = []
-    backward_errors = []
-    central_errors = []
-    richardson_errors = []
+    print("\nFunction:", name)
+    print("Exact Derivative:", f"{exact:.10f}")
 
-    print("\n" + "=" * 120)
-    print("DIFFERENTIATION -", name)
-    print("=" * 120)
-
-    print("x =", x)
-    print("Exact Derivative =", f"{exact:.10f}")
-
-    print("-" * 120)
+    print("\n" + "-" * 120)
 
     print(
         f"{'h':<12}"
@@ -111,34 +101,28 @@ for name, f, df in functions:
 
     print("-" * 120)
 
+    forward_errors = []
+    backward_errors = []
+    central_errors = []
+    richardson_errors = []
 
-    # Calculate all h values
     for h in h_values:
 
         forward = ForwardDifference(x, h).calculate(f)
-
         backward = BackwardDifference(x, h).calculate(f)
-
         central = CentralDifference(x, h).calculate(f)
-
         richardson = RichardsonExtrapolation(x, h).calculate(f)
 
-
-        # Absolute errors
         f_error = abs(exact - forward)
         b_error = abs(exact - backward)
         c_error = abs(exact - central)
         r_error = abs(exact - richardson)
 
-
-        # Store errors for graph
         forward_errors.append(f_error)
         backward_errors.append(b_error)
         central_errors.append(c_error)
         richardson_errors.append(r_error)
 
-
-        # Print result
         print(
             f"{h:<12.0e}"
             f"{forward:<18.10f}{f_error:<16.5e}"
@@ -147,27 +131,8 @@ for name, f, df in functions:
             f"{richardson:<18.10f}{r_error:<16.5e}"
         )
 
-
-        # Store CSV data
-        diff_results.append([
-            name,
-            x,
-            h,
-            exact,
-            forward,
-            f_error,
-            backward,
-            b_error,
-            central,
-            c_error,
-            richardson,
-            r_error
-        ])
-
-
     # ========================================================
     # DIFFERENTIATION GRAPH
-    # SAVE ONLY ONCE
     # ========================================================
 
     plt.figure(figsize=(8, 5))
@@ -207,366 +172,460 @@ for name, f, df in functions:
     plt.legend()
     plt.grid(True)
 
-    if name == "e^x":
-        file_name = "graphs/ex_differentiation.png"
+    filename = {
+        "e^x": "graphs/ex_differentiation.png",
+        "sin(x)": "graphs/sin_differentiation.png"
+    }.get(
+        name,
+        "graphs/polynomial_differentiation.png"
+    )
 
-    elif name == "sin(x)":
-        file_name = "graphs/sin_differentiation.png"
+    # Save graph
+    plt.savefig(
+        filename,
+        dpi=300,
+        bbox_inches="tight"
+    )
 
-    else:
-        file_name = "graphs/polynomial_differentiation.png"
+    print("\nGraph saved:", filename)
 
-
-    plt.savefig(file_name, dpi=300, bbox_inches="tight")
+    # Show graph
+    plt.show()
 
     plt.close()
 
 
 # ============================================================
-# INTERPOLATION
+# LAGRANGE INTERPOLATION
 # ============================================================
 
-for name, f, df in functions:
-
-    # --------------------------------------------------------
-    # Calculate y values only once
-    # --------------------------------------------------------
-
-    y_data = [f(value) for value in x_data]
+def lagrange_interpolation():
 
     print("\n" + "=" * 70)
-    print("INTERPOLATION DATA -", name)
+    print("LAGRANGE INTERPOLATION")
     print("=" * 70)
 
-    print("x_data:", x_data)
+    x = float(input("Enter x value: "))
+
+    data = input(
+        "Enter known x values separated by comma: "
+    )
+
+    x_data = [
+        float(v.strip())
+        for v in data.split(",")
+    ]
+
+    if len(x_data) < 2:
+        print("Enter at least 2 x values.")
+        return
+
+    if len(x_data) != len(set(x_data)):
+        print("x values must be different.")
+        return
+
+    selected = choose_function()
+
+    if selected is None:
+        return
+
+    name, f, df = selected
+
+    y_data = [
+        f(value)
+        for value in x_data
+    ]
+
+    method = LagrangeInterpolation(
+        x_data,
+        y_data
+    )
+
+    result = method.calculate(x)
+
+    exact = f(x)
+
+    error = abs(exact - result)
+
+    print("\n" + "-" * 75)
 
     print(
-        "y_data:",
-        [round(value, 6) for value in y_data]
+        f"{'Function':<25}"
+        f"{'Exact':<18}"
+        f"{'Lagrange':<18}"
+        f"{'Error':<15}"
+    )
+
+    print("-" * 75)
+
+    print(
+        f"{name:<25}"
+        f"{exact:<18.10f}"
+        f"{result:<18.10f}"
+        f"{error:<15.5e}"
     )
 
 
-    # ========================================================
-    # LAGRANGE
-    # ========================================================
+# ============================================================
+# NEWTON INTERPOLATION
+# ============================================================
 
-    lagrange = LagrangeInterpolation(
+def newton_interpolation():
+
+    print("\n" + "=" * 70)
+    print("NEWTON INTERPOLATION")
+    print("=" * 70)
+
+    x = float(input("Enter x value: "))
+
+    data = input(
+        "Enter known x values separated by comma: "
+    )
+
+    x_data = [
+        float(v.strip())
+        for v in data.split(",")
+    ]
+
+    if len(x_data) < 2:
+        print("Enter at least 2 x values.")
+        return
+
+    if len(x_data) != len(set(x_data)):
+        print("x values must be different.")
+        return
+
+    selected = choose_function()
+
+    if selected is None:
+        return
+
+    name, f, df = selected
+
+    y_data = [
+        f(value)
+        for value in x_data
+    ]
+
+    method = NewtonInterpolation(
         x_data,
         y_data
     )
 
-    lagrange_value = lagrange.calculate(x)
+    result = method.calculate(x)
 
-    exact_value = f(x)
+    exact = f(x)
 
-    lagrange_error = abs(
-        exact_value - lagrange_value
+    error = abs(exact - result)
+
+    print("\n" + "-" * 75)
+
+    print(
+        f"{'Function':<25}"
+        f"{'Exact':<18}"
+        f"{'Newton':<18}"
+        f"{'Error':<15}"
     )
 
+    print("-" * 75)
 
-    lagrange_results.append([
-        name,
-        exact_value,
-        lagrange_value,
-        lagrange_error
-    ])
-
-
-    # ========================================================
-    # NEWTON
-    # ========================================================
-
-    newton = NewtonInterpolation(
-        x_data,
-        y_data
+    print(
+        f"{name:<25}"
+        f"{exact:<18.10f}"
+        f"{result:<18.10f}"
+        f"{error:<15.5e}"
     )
 
-    newton_value = newton.calculate(x)
+# ============================================================
+# NUMERICAL INTEGRATION
+# ============================================================
 
-    newton_error = abs(
-        exact_value - newton_value
-    )
+def get_exact_integral(name, a, b):
 
+    if name == "e^x":
+        return math.exp(b) - math.exp(a)
 
-    newton_results.append([
-        name,
-        exact_value,
-        newton_value,
-        newton_error
-    ])
+    elif name == "sin(x)":
+        return -math.cos(b) + math.cos(a)
 
-
-    # ========================================================
-    # GRAPH DATA
-    # ========================================================
-
-    minimum = min(x_data)
-    maximum = max(x_data)
-
-    graph_x = []
-
-    for i in range(101):
-
-        value = (
-            minimum +
-            i * (maximum - minimum) / 100
+    else:
+        # Integral of x^3 - 2x + 1
+        # = x^4/4 - x^2 + x
+        return (
+            (b**4 / 4 - b**2 + b)
+            - (a**4 / 4 - a**2 + a)
         )
 
-        graph_x.append(value)
+
+def numerical_integration():
+
+    print("\n" + "=" * 70)
+    print("                 NUMERICAL INTEGRATION")
+    print("=" * 70)
+
+    selected = choose_function()
+
+    if selected is None:
+        return
+
+    name, f, df = selected
+
+    a = float(input("Enter lower limit: "))
+    b = float(input("Enter upper limit: "))
+
+    if a == b:
+        print("Lower and upper limits must be different.")
+        return
 
 
-    actual_y = [
-        f(value)
-        for value in graph_x
-    ]
+    print()
+    data = input("Enter n values: ")
 
-    lagrange_y = [
-        lagrange.calculate(value)
-        for value in graph_x
-    ]
+    try:
+        n_values = [int(v.strip()) for v in data.split(",")]
+    except ValueError:
+        print("\nInvalid input. Example: 2,4,6,8,12")
+        return
 
-    newton_y = [
-        newton.calculate(value)
-        for value in graph_x
-    ]
+    if len(n_values) == 0 or any(n <= 0 for n in n_values):
+        print("\nAll n values must be positive.")
+        return
 
+    # Remove duplicate n values
+    n_values = list(dict.fromkeys(n_values))
 
-    # ========================================================
-    # LAGRANGE GRAPH
-    # SAVE ONLY ONCE
-    # ========================================================
+    exact = get_exact_integral(name, a, b)
 
-    plt.figure(figsize=(8, 5))
+    # Store results for graph
+    graph_h_trap = []
+    graph_h_13 = []
+    graph_h_38 = []
 
-    plt.plot(
-        graph_x,
-        actual_y,
-        label="Actual Function"
-    )
+    trap_errors = []
+    simpson13_errors = []
+    simpson38_errors = []
 
-    plt.plot(
-        graph_x,
-        lagrange_y,
-        "--",
-        label="Lagrange Polynomial"
-    )
+    rows = []
 
-    plt.scatter(
-        x_data,
-        y_data,
-        label="Known Data"
-    )
+    for n in n_values:
 
-    plt.xlabel("x")
-    plt.ylabel("f(x)")
-    plt.title("Lagrange Interpolation - " + name)
+        h = (b - a) / n
 
-    plt.legend()
-    plt.grid(True)
+        # --------------------------------------------------------
+        # Trapezoidal Rule
+        # Always valid for positive n
+        # --------------------------------------------------------
+        trap_result = TrapezoidalRule(a, b, n).calculate(f)
+        trap_error = abs(exact - trap_result)
 
+        # --------------------------------------------------------
+        # Simpson 1/3 Rule
+        # Valid only when n is even
+        # --------------------------------------------------------
+        if n % 2 == 0:
+            s13_result = Simpson13Rule(a, b, n).calculate(f)
+            s13_error = abs(exact - s13_result)
+        else:
+            s13_result = None
+            s13_error = None
 
-    if name == "e^x":
-        file_name = "graphs/ex_lagrange.png"
+        # --------------------------------------------------------
+        # Simpson 3/8 Rule
+        # Valid only when n is divisible by 3
+        # --------------------------------------------------------
+        if n % 3 == 0:
+            s38_result = Simpson38Rule(a, b, n).calculate(f)
+            s38_error = abs(exact - s38_result)
+        else:
+            s38_result = None
+            s38_error = None
 
-    elif name == "sin(x)":
-        file_name = "graphs/sin_lagrange.png"
+        rows.append((
+            n, h,
+            trap_result, s13_result, s38_result,
+            trap_error, s13_error, s38_error
+        ))
 
-    else:
-        file_name = "graphs/polynomial_lagrange.png"
+        # Graph data
+        if trap_error > 0:
+            graph_h_trap.append(h)
+            trap_errors.append(trap_error)
 
+        if s13_error is not None and s13_error > 0:
+            graph_h_13.append(h)
+            simpson13_errors.append(s13_error)
 
-    plt.savefig(
-        file_name,
-        dpi=300,
-        bbox_inches="tight"
-    )
+        if s38_error is not None and s38_error > 0:
+            graph_h_38.append(h)
+            simpson38_errors.append(s38_error)
 
-    plt.close()
+    # ============================================================
+    # EXACT VALUE
+    # ============================================================
 
+    print("\n" + "=" * 70)
+    print(f"Function: {name}")
+    print(f"Limits: {a:g} to {b:g}")
+    print(f"Exact Integral = {exact:.10f}")
+    print("=" * 70)
 
-    # ========================================================
-    # NEWTON GRAPH
-    # SAVE ONLY ONCE
-    # ========================================================
+    # ============================================================
+    # RESULT COMPARISON TABLE
+    # ============================================================
 
-    plt.figure(figsize=(8, 5))
-
-    plt.plot(
-        graph_x,
-        actual_y,
-        label="Actual Function"
-    )
-
-    plt.plot(
-        graph_x,
-        newton_y,
-        "--",
-        label="Newton Polynomial"
-    )
-
-    plt.scatter(
-        x_data,
-        y_data,
-        label="Known Data"
-    )
-
-    plt.xlabel("x")
-    plt.ylabel("f(x)")
-    plt.title("Newton Interpolation - " + name)
-
-    plt.legend()
-    plt.grid(True)
-
-
-    if name == "e^x":
-        file_name = "graphs/ex_newton.png"
-
-    elif name == "sin(x)":
-        file_name = "graphs/sin_newton.png"
-
-    else:
-        file_name = "graphs/polynomial_newton.png"
-
-
-    plt.savefig(
-        file_name,
-        dpi=300,
-        bbox_inches="tight"
-    )
-
-    plt.close()
-
-
-# ============================================================
-# LAGRANGE RESULT TABLE
-# ============================================================
-
-print("\n" + "=" * 85)
-print("LAGRANGE INTERPOLATION RESULTS")
-print("=" * 85)
-
-print(
-    f"{'Function':<25}"
-    f"{'Exact f(x)':<20}"
-    f"{'Lagrange P(x)':<20}"
-    f"{'Absolute Error':<20}"
-)
-
-print("-" * 85)
-
-for name, exact, value, error in lagrange_results:
+    print("\n" + "=" * 70)
+    print("                    RESULT COMPARISON")
+    print("=" * 70)
 
     print(
-        f"{name:<25}"
-        f"{exact:<20.10f}"
-        f"{value:<20.10f}"
-        f"{error:<20.5e}"
+        f"{'n':>4} "
+        f"{'h':>12} "
+        f"{'Trapezoidal':>16} "
+        f"{'Simpson 1/3':>16} "
+        f"{'Simpson 3/8':>16}"
     )
 
+    print("-" * 70)
 
-# ============================================================
-# NEWTON RESULT TABLE
-# ============================================================
+    for row in rows:
 
-print("\n" + "=" * 85)
-print("NEWTON INTERPOLATION RESULTS")
-print("=" * 85)
+        n, h, trap, s13, s38, _, _, _ = row
 
-print(
-    f"{'Function':<25}"
-    f"{'Exact f(x)':<20}"
-    f"{'Newton P(x)':<20}"
-    f"{'Absolute Error':<20}"
-)
+        trap_text = f"{trap:.10f}"
+        s13_text = f"{s13:.10f}" if s13 is not None else "--"
+        s38_text = f"{s38:.10f}" if s38 is not None else "--"
 
-print("-" * 85)
+        print(
+            f"{n:>4} "
+            f"{h:>12.6f} "
+            f"{trap_text:>16} "
+            f"{s13_text:>16} "
+            f"{s38_text:>16}"
+        )
 
-for name, exact, value, error in newton_results:
+    # ============================================================
+    # ERROR TABLE
+    # ============================================================
+
+    print("\n" + "=" * 70)
+    print("                     ABSOLUTE ERROR")
+    print("=" * 70)
 
     print(
-        f"{name:<25}"
-        f"{exact:<20.10f}"
-        f"{value:<20.10f}"
-        f"{error:<20.5e}"
+        f"{'n':>4} "
+        f"{'Trapezoidal':>18} "
+        f"{'Simpson 1/3':>18} "
+        f"{'Simpson 3/8':>18}"
     )
 
+    print("-" * 70)
+
+    for row in rows:
+
+        n, _, _, _, _, trap_error, s13_error, s38_error = row
+
+        trap_text = f"{trap_error:.6f}"
+        s13_text = f"{s13_error:.6f}" if s13_error is not None else "--"
+        s38_text = f"{s38_error:.6f}" if s38_error is not None else "--"
+
+        print(
+            f"{n:>4} "
+            f"{trap_text:>18} "
+            f"{s13_text:>18} "
+            f"{s38_text:>18}"
+        )
+
+    print("=" * 70)
+
+    # ============================================================
+    # LOG-LOG ERROR GRAPH
+    # ============================================================
+
+    plt.figure(figsize=(9, 6))
+
+    if graph_h_trap:
+        plt.loglog(
+            graph_h_trap,
+            trap_errors,
+            "o-",
+            label="Trapezoidal"
+        )
+
+    if graph_h_13:
+        plt.loglog(
+            graph_h_13,
+            simpson13_errors,
+            "s-",
+            label="Simpson 1/3"
+        )
+
+    if graph_h_38:
+        plt.loglog(
+            graph_h_38,
+            simpson38_errors,
+            "^-",
+            label="Simpson 3/8"
+        )
+
+    plt.xlabel("Step size (h)")
+    plt.ylabel("Absolute Error")
+    plt.title(f"Integration Error Comparison - {name}")
+    plt.grid(True, which="both")
+    plt.legend()
+    plt.tight_layout()
+
+    os.makedirs("graphs", exist_ok=True)
+
+    filename = name.replace("^", "").replace("(", "").replace(")", "")
+    filename = filename.replace(" ", "_")
+
+    graph_path = f"graphs/{filename}_integration_error.png"
+    plt.savefig(graph_path)
+    plt.close()
+
+    print(f"\nLog-log error graph saved: {graph_path}")
 
 # ============================================================
-# SAVE CSV
+# MAIN MENU
 # ============================================================
 
-with open("result.csv", "w", newline="") as file:
+while True:
 
-    writer = csv.writer(file)
+    print("\n" + "=" * 60)
+    print("              NUMERICAL COMPUTING")
+    print("=" * 60)
 
+    print("1. Numerical Differentiation")
+    print("2. Lagrange Interpolation")
+    print("3. Newton Interpolation")
+    print("4. Numerical Integration")
+    print("5. Exit")
 
-    # Differentiation
-    writer.writerow(["DIFFERENTIATION RESULTS"])
+    print("=" * 60)
 
-    writer.writerow([
-        "Function",
-        "x",
-        "h",
-        "Exact",
-        "Forward",
-        "F Error",
-        "Backward",
-        "B Error",
-        "Central",
-        "C Error",
-        "Richardson",
-        "R Error"
-    ])
+    choice = input("Enter your choice: ")
 
-    writer.writerows(diff_results)
+    if choice == "1":
 
+        differentiation()
 
-    writer.writerow([])
-    writer.writerow([])
+    elif choice == "2":
 
+        lagrange_interpolation()
 
-    # Lagrange
-    writer.writerow([
-        "LAGRANGE INTERPOLATION RESULTS"
-    ])
+    elif choice == "3":
 
-    writer.writerow([
-        "Function",
-        "Exact f(x)",
-        "Lagrange P(x)",
-        "Absolute Error"
-    ])
+        newton_interpolation()
 
-    writer.writerows(lagrange_results)
+    elif choice == "4":
 
+        numerical_integration()
 
-    writer.writerow([])
-    writer.writerow([])
+    elif choice == "5":
 
+        print("\nProgram finished.")
+        break
 
-    # Newton
-    writer.writerow([
-        "NEWTON INTERPOLATION RESULTS"
-    ])
+    else:
 
-    writer.writerow([
-        "Function",
-        "Exact f(x)",
-        "Newton P(x)",
-        "Absolute Error"
-    ])
-
-    writer.writerows(newton_results)
-
-
-# ============================================================
-# FINAL MESSAGE
-# ============================================================
-
-print("\n" + "=" * 60)
-print("ALL RESULTS SAVED SUCCESSFULLY")
-print("=" * 60)
-
-print("CSV file : result.csv")
-print("Graphs   : graphs/")
-print("Total graphs : 9")
+        print("\nInvalid choice. Please enter 1 to 5.")
