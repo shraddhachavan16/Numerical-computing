@@ -15,7 +15,6 @@ class Simpson13Rule(Integration):
         for i in range(1, self.n):
 
             x = self.a + i * h
-
             if i % 2 == 0:
                 result = result + 2 * f(x)
             else:
